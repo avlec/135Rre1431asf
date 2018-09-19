@@ -1,1 +1,2 @@
-build
+build/PMan
+build/*.o

@@ -3,46 +3,46 @@
 #include <string.h>
 
 #include "header/CommandParser.h"
-#include "header/ProcessStructure.h"
+#include "header/ProcessLinkedList.h"
 
-#define DEBUG_OFF
+#define DEBUG
 
 #define PMAN_LINE  "PMan > "
 #define ERROR_LINE "ERR: %s\n"
 
 //TODO AAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-void exec_new_process(char * output_buffer, process_node * process) {
+void exec_new_process(char * output_buffer, ProcessNode * process) {
 	// Do shit
 
 	// Write to buffer
 }
 
-void free_process(process_node * process) {
+void free_process(ProcessNode * process) {
 	if(process == NULL)
 		return;
 	free(process);
 }
 
-void exec_kill_process(char * output_buffer, process_node * process) {
+void exec_kill_process(char * output_buffer, ProcessNode * process) {
 	// Do shit
 	
 	free_process(process);
 	// Write to buffer
 }
 
-void exec_stop_process(char * output_buffer, process_node * process) {
+void exec_stop_process(char * output_buffer, ProcessNode * process) {
 	// Do shit
 
 	// Write to buffer
 }
 
-void exec_start_process(char * output_buffer, process_node * process) {
+void exec_start_process(char * output_buffer, ProcessNode * process) {
 	// Do shit
 
 	// Write to buffer
 }
 
-void exec_process_status(char * output_buffer, process_node * process) {
+void exec_process_status(char * output_buffer, ProcessNode * process) {
 	// Do shit
 
 	// Write to buffer
@@ -64,8 +64,7 @@ int main(int argc, char ** argv) {
 	test_split_command();
 	#endif	
 	
-	process_node * root_node = NULL;
-	process_node * end_node = NULL;
+	LinkedList l_list;
 
 	while(running) {
 		// Print CLI line heading
@@ -82,7 +81,7 @@ int main(int argc, char ** argv) {
 			if(buffer[i] == '\n')
 				buffer[i] = '\0';
 		#ifdef DEBUG
-		fprintf(stderr, "Command { %s } yields\n", buffer);	
+		fprintf(stderr, "Command {%s} yields\n", buffer);	
 		#endif
 		
 		// Process Input		
@@ -92,45 +91,65 @@ int main(int argc, char ** argv) {
 		fprintf(stderr, "\t> command[%s(%d)|%d] with param[%s(%d)]\n", cmd_struct.command, cmd_struct.command_length, cmd_struct.command_code, cmd_struct.command_param, cmd_struct.param_length); 
 		#endif
 		
-		process_node * process = NULL;	
+		ProcessNode * process = NULL;	
 		int pid = 0;
 		// Do things with command parameters
 		switch(cmd_struct.command_code) {
 			case NEW_PROCESS:
-				process = create_process(&cmd_struct);
-				add_process(end_node, process);
+				// Create the process object
+				//HERE
+				
+				// Add it to the linked list
+				list_add(&l_list, pid);
+				
+				// Perform System Calls
 				exec_new_process(output_buffer, process);
 				break;
+
 			case LIST_PROCESSES:
-				print_processes(output_buffer, root_node);
+
+				list_print(l_list);
 				break;
+
 			case KILL_PROCESS:
-				process = remove_process(&root_node, pid);
-				if(process == NULL)
-					print_notfound(output_buffer, pid);
+				// Get the process object
+				process = list_remove(&l_list, pid);
+				if(process == NULL) // Error check
+					fprintf(stderr, ERROR_LINE, "Killing process, process not found");
+				
+				// Perform System Calls
 				exec_kill_process(output_buffer, process);
 				break;
+
 			case STOP_PROCESS:
-				process = find_process(root_node, pid);
-				if(process == NULL)
-					print_notfound(output_buffer, pid);
+				process = list_find(l_list, pid);
+				if(process == NULL) // Error check
+					fprintf(stderr, ERROR_LINE, "Stopping process, process not found");
+				
+				// Perform System Calls
 				exec_stop_process(output_buffer, process);
 				break;
+
 			case START_PROCESS:
-				process = find_process(root_node, pid);
-				if(process == NULL)
-					print_notfound(output_buffer, pid);
+				process = list_find(l_list, pid);
+				if(process == NULL) // Error Check
+					fprintf(stderr, ERROR_LINE, "Starting process, process not found");
+				
+				// Perform System Calls
 				exec_start_process(output_buffer, process);
 				break;
+
 			case PROCESS_STATUS:
-				process = find_process(root_node, pid);
-				if(process == NULL)
-					print_notfound(output_buffer, pid);
+				process = list_find(l_list, pid);
+				if(process == NULL) // Error check
+					fprintf(stderr, ERROR_LINE, "Getting process status, process not found");
+				
+				// Perform System Calls
 				exec_process_status(output_buffer, process);
 				break;
 	
 			case INVALID_COMMAND:	
-			default:
+			default: // Input error handling
 				printf(ERROR_LINE, "Invalid input.");	
 		}
 		

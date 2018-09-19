@@ -14,12 +14,12 @@ int process_input(char * command, int length, command_struct * c_struct) {
 	int pos = 0;
 	while(curr[pos] != ' ') { // Find the spaces after the first command 
 		if(pos >= length)
-			return -1;
+			break;
 		++pos;
 	}
 	while(curr[pos] == ' ') { // Replaces spaces after first command with '\0'
 		if(pos >= length)
-			return -1;
+			break;
 		curr[pos] = '\0';
 		++pos;
 	}

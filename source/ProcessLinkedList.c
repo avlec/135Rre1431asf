@@ -3,6 +3,11 @@
 
 #include "header/ProcessLinkedList.h"
 
+void list_init(LinkedList * l_list) {
+	l_list->head = NULL;
+	l_list->tail = NULL;
+	l_list->size = 0;
+}
 
 /*	Adds a node with pid to the list
 	if the node is in the list returns -1, and does nothing.

@@ -6,9 +6,11 @@
 #include "header/ProcessLinkedList.h"
 
 #define DEBUG
+#define TESTS_off
 
-#define PMAN_LINE  "PMan > "
-#define ERROR_LINE "ERR: %s\n"
+#define PMAN_LINE  	"PMan > "
+#define ERROR_LINE 	"ERR: %s\n"
+#define MSG_LINE	"MSG: %s\n"
 
 //TODO AAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 void exec_new_process(char * output_buffer, ProcessNode * process) {
@@ -59,12 +61,13 @@ int main(int argc, char ** argv) {
 
 	int running = 1;
 
-	#ifdef DEBUG
+	#ifdef TESTS
 	test_command_code();
 	test_split_command();
 	#endif	
 	
 	LinkedList l_list;
+	list_init(&l_list);
 
 	while(running) {
 		// Print CLI line heading
@@ -96,6 +99,9 @@ int main(int argc, char ** argv) {
 		// Do things with command parameters
 		switch(cmd_struct.command_code) {
 			case NEW_PROCESS:
+				#ifdef DEBUG
+				fprintf(stderr, MSG_LINE, "New process.");
+				#endif
 				// Create the process object
 				//HERE
 				
@@ -107,11 +113,16 @@ int main(int argc, char ** argv) {
 				break;
 
 			case LIST_PROCESSES:
-
+				#ifdef DEBUG
+				fprintf(stderr, MSG_LINE, "Listing processes.");
+				#endif
 				list_print(l_list);
 				break;
 
 			case KILL_PROCESS:
+				#ifdef DEBUG
+				fprintf(stderr, MSG_LINE, "Killing process.");
+				#endif
 				// Get the process object
 				process = list_remove(&l_list, pid);
 				if(process == NULL) // Error check
@@ -122,6 +133,9 @@ int main(int argc, char ** argv) {
 				break;
 
 			case STOP_PROCESS:
+				#ifdef DEBUG
+				fprintf(stderr, MSG_LINE, "Stopping process.");
+				#endif
 				process = list_find(l_list, pid);
 				if(process == NULL) // Error check
 					fprintf(stderr, ERROR_LINE, "Stopping process, process not found");
@@ -131,6 +145,9 @@ int main(int argc, char ** argv) {
 				break;
 
 			case START_PROCESS:
+				#ifdef DEBUG
+				fprintf(stderr, MSG_LINE, "Starting process.");
+				#endif
 				process = list_find(l_list, pid);
 				if(process == NULL) // Error Check
 					fprintf(stderr, ERROR_LINE, "Starting process, process not found");
@@ -140,6 +157,9 @@ int main(int argc, char ** argv) {
 				break;
 
 			case PROCESS_STATUS:
+				#ifdef DEBUG
+				fprintf(stderr, MSG_LINE, "Get process status.");
+				#endif
 				process = list_find(l_list, pid);
 				if(process == NULL) // Error check
 					fprintf(stderr, ERROR_LINE, "Getting process status, process not found");

@@ -16,6 +16,8 @@ typedef struct LinkedList {
 	int size;
 } LinkedList;
 
+
+void list_init(LinkedList * l_list);
 int list_add(LinkedList * l_list, int pid);
 ProcessNode * list_find(LinkedList l_list, int pid);
 ProcessNode * list_remove(LinkedList * l_list, int pid);

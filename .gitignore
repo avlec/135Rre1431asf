@@ -1,2 +1,3 @@
 build/PMan
-build/*.o
+*.o
+*.out

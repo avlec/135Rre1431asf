@@ -22,7 +22,6 @@ typedef struct command_struct {
 	char * command;
 	int command_length;
 	CommandCodeType command_code;
-	char * command_param;
-	int param_length;
+	char ** command_params;
 } command_struct;
 #endif

@@ -6,6 +6,7 @@
 typedef struct ProcessNode ProcessNode;
 struct ProcessNode {
 	int pid;
+	CommandStruct command_struct;
 	ProcessNode * next;
 	ProcessNode * prev;
 };
@@ -18,7 +19,7 @@ typedef struct LinkedList {
 
 
 void list_init(LinkedList * l_list);
-int list_add(LinkedList * l_list, int pid);
+int list_add(LinkedList * l_list, ProcessNode * new_node);
 ProcessNode * list_find(LinkedList l_list, int pid);
 ProcessNode * list_remove(LinkedList * l_list, int pid);
 void list_print(LinkedList l_list);

@@ -18,10 +18,10 @@ typedef enum {
 	PROCESS_STATUS	
 } CommandCodeType;
 
-typedef struct command_struct {
+typedef struct CommandStruct {
 	char * command;
 	int command_length;
 	CommandCodeType command_code;
 	char ** command_params;
-} command_struct;
+} CommandStruct;
 #endif

@@ -1,4 +1,5 @@
 build/PMan
+build/Inf
 *.o
 *.out
 *.swp

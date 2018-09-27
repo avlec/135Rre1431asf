@@ -13,15 +13,10 @@ void list_init(LinkedList * l_list) {
 	if the node is in the list returns -1, and does nothing.
 	otherwise node is added to the list and returns 0
 */
-int list_add(LinkedList * l_list, int pid) {
+int list_add(LinkedList * l_list, ProcessNode * new_node) {
 	// Check if duplicate
-	if(list_find(*(l_list), pid) == NULL)
+	if(list_find(*(l_list), new_node->pid) != NULL)
 		return -1;
-
-	ProcessNode * new_node = (ProcessNode *) malloc(sizeof(ProcessNode));
-	new_node->pid = pid;
-	new_node->next = NULL;
-	new_node->prev = NULL;
 
 	ProcessNode * t_node = l_list->tail;
 	if(t_node == NULL) {

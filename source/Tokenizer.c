@@ -11,7 +11,7 @@ bool 	stot_f_dc(char character, char * delimiters);
 
 char ** stot_d(char * string, int string_length, char * delimiters) {
 	char ** tokens = (char **) malloc(sizeof(char*)*DEFAULT_TOKEN_LENGTH);
-	if(tokens == NULL)
+	if(tokens == NULL || string_length == 0)
 		return NULL;
 	// Give string.
 	tokens[0] = string;
@@ -21,7 +21,7 @@ char ** stot_d(char * string, int string_length, char * delimiters) {
 
 char ** stot(char * string, int string_length, char delimiter) {
 	char ** tokens = (char **) malloc(sizeof(char*)*DEFAULT_TOKEN_LENGTH);
-	if(tokens == NULL)
+	if(tokens == NULL || string_length == 0)
 		return NULL;
 	// Give string.
 	tokens[0] = string;
@@ -33,7 +33,7 @@ char ** stot(char * string, int string_length, char delimiter) {
 char ** cstot_d(const char * string, int string_length, char * delimiters) {
 	// Allocate room for our array of pointers to our given string
 	char ** tokens = (char **) malloc(sizeof(char*)*DEFAULT_TOKEN_LENGTH);
-	if(tokens == NULL)
+	if(tokens == NULL || string_length == 0)
 		return NULL;
 	// copy string into tokens[0]
 	tokens[0] = (char *) malloc(sizeof(char)*string_length);
@@ -46,7 +46,7 @@ char ** cstot_d(const char * string, int string_length, char * delimiters) {
 char ** cstot(const char * string, int string_length, char delimiter) {
 	// Allocate room for our array of pointers to our given string
 	char ** tokens = (char **) malloc(sizeof(char*)*DEFAULT_TOKEN_LENGTH);
-	if(tokens == NULL)
+	if(tokens == NULL || string_length == 0)
 		return NULL;
 	// copy string into tokens[0]
 	tokens[0] = (char *) malloc(sizeof(char)*string_length);
@@ -86,6 +86,6 @@ char ** stot_f(char ** tokens, int string_length, char * delimiters) {
 			}
 		}
 	}
-
+	tokens[++token_index] = NULL; // LAST TOKEN NULL
 	return tokens;
 }

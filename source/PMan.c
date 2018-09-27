@@ -1,23 +1,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 
 #include "header/Tokenizer.h"
 #include "header/CommandTypes.h"
 #include "header/ProcessLinkedList.h"
 
-#define DEBUG_off
+#define DEBUG
 #define TESTS_off
 
 #define PMAN_LINE  	"PMan > "
 #define ERROR_LINE 	"ERR: %s\n"
 #define MSG_LINE	"MSG: %s\n"
 
-//TODO AAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-void exec_new_process(char * output_buffer, ProcessNode * process) {
-	// Do shit
+void exec_new_process(ProcessNode * process) {
+	if(process->command_struct.command_params[0] == NULL)
+		return;
 
-	// Write to buffer
+	int child_pid = fork();
+	if(child_pid == 0) {
+		#ifdef DEBUG
+		fprintf(stderr, "Execing %s, starting with %s\n", process->command_struct.command_params[0], process->command_struct.command_params[1]);
+		#endif
+		execv(process->command_struct.command_params[0],
+				process->command_struct.command_params);
+		perror("execv");
+		_exit(0);
+	}
+	fprintf(stderr, "\nAfter Fork %d\n", child_pid);
+	process->pid = child_pid;
 }
 
 void free_process(ProcessNode * process) {
@@ -26,29 +42,78 @@ void free_process(ProcessNode * process) {
 	free(process);
 }
 
-void exec_kill_process(char * output_buffer, ProcessNode * process) {
+void exec_kill_process(ProcessNode * process) {
 	// Do shit
+	pid_t ret = kill(process->pid, SIGTERM);
+	if(ret == 0)
+		free_process(process);
+	else
+		fprintf(stderr, "ERR: Killing process %d:%s failed.\n", process->pid, process->command_struct.command_params[1]);
+	// Write to buffer
+}
+
+void exec_stop_process(ProcessNode * process) {
+	// Do shit
+	pid_t pid = kill(process->pid, SIGSTOP);
+	if(pid == 0)
+		return;
+	else
+		fprintf(stderr, "ERR: Killing process %d:%s failed", process->pid, process->command_struct.command_params[1]);
+	// Write to buffer
+}
+
+void exec_start_process(ProcessNode * process) {
+	// Do shit
+	pid_t pid = kill(process->pid, SIGCONT);
+	if(pid == 0)
+		return;
+	else
+		fprintf(stderr, "ERR: Starting process %d:%s failed.", process->pid, process->command_struct.command_params[1]);
+	// Write to buffer
+}
+typedef struct ProcInfo {
+	char * comm;
+	char state;
+	long unsigned int utime;
+	long unsigned int stime;
+	long int rss;
+	int voluntary_context_switches;
+    int nonvoluntary_context_switches;
+} ProcInfo;
+
+void exec_process_status(ProcessNode * process) {
+	ProcInfo p_info;
+    char str[64];
+	sprintf(str, "/proc/%d/stat", process->pid);
+	FILE * proc_pid_stat = fopen(str, "r");
+	if(proc_pid_stat == NULL) {
+	    printf(ERROR_LINE, "Opening /proc/.../stat.");
+	    return;
+	}
+    
+	int matches = fscanf(proc_pid_stat, " %*d %s %c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d %*d %*d %*d %*d %*u %*u %ld %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*u %*d %*d %*u %*u %*u %*u %*d",
+			p_info.comm, &p_info.state, &p_info.utime, &p_info.stime, &p_info.rss);
+    
+
+	sprintf(str, "/proc/%d/status", process->pid);
+	FILE * proc_pid_status = fopen(str, "r");
+
+    if(proc_pid_status == NULL) {
+	    printf(ERROR_LINE, "Opening /proc/.../status.");
+	    return;
+	}
 	
-	free_process(process);
-	// Write to buffer
-}
+    char buffer[64];
+    while(fgets(buffer, sizeof buffer, proc_pid_status) != NULL) {
+        if(strncmp(buffer, "voluntary_ctxt_switches", 23) != 0)
+            continue;
+        else {
+            matches += sscanf(buffer, "%*s %d", &p_info.voluntary_context_switches);
+            fgets(buffer, sizeof buffer, proc_pid_status);
+            matches += sscanf(buffer, "%*s %d", &p_info.nonvoluntary_context_switches);
+        }
 
-void exec_stop_process(char * output_buffer, ProcessNode * process) {
-	// Do shit
-
-	// Write to buffer
-}
-
-void exec_start_process(char * output_buffer, ProcessNode * process) {
-	// Do shit
-
-	// Write to buffer
-}
-
-void exec_process_status(char * output_buffer, ProcessNode * process) {
-	// Do shit
-
-	// Write to buffer
+    }
 }
 
 
@@ -92,15 +157,8 @@ int main(int argc, char ** argv) {
 	
 	int buffer_size = 256;
 	char * buffer = (char *) malloc(buffer_size * sizeof(char));
-	int output_buffer_size = 256;
-	char * output_buffer = (char *) malloc(output_buffer_size * sizeof(char));
 	int running = 1;
 
-	#ifdef TESTS
-	test_command_code();
-	test_split_command();
-	#endif	
-	
 	LinkedList l_list;
 	list_init(&l_list);
 
@@ -110,7 +168,6 @@ int main(int argc, char ** argv) {
 	
 		// Clear buffers
 		memset(buffer, '\0', buffer_size);
-		memset(output_buffer, '\0', output_buffer_size);
 		
 		// Read User Input
 		if(fgets(buffer, buffer_size, stdin) == NULL)
@@ -119,18 +176,18 @@ int main(int argc, char ** argv) {
 			if(buffer[i] == '\n')
 				buffer[i] = '\0';
 		#ifdef DEBUG
-		fprintf(stderr, "Command {%s} yields\n", buffer);	
+		fprintf(stderr, "Command {%lu|%s} yields\n", strlen(buffer), buffer);	
 		#endif
 		
 		//Tokenize input new
-		command_struct cmd_struct;		
+		CommandStruct cmd_struct;		
 		char ** tokens = stot(buffer, strlen(buffer), ' ');
-		if(tokens == NULL) { // TODO ERROR
+		if(tokens == NULL) { // ERROR
 			cmd_struct.command = NULL;
 			cmd_struct.command_length = 0;
 			cmd_struct.command_code = INVALID_COMMAND; 
 			cmd_struct.command_params = NULL;
-		} else {
+		} else {			 // NO ERROR!
 			cmd_struct.command = tokens[0];
 			cmd_struct.command_length = strlen(tokens[0]);
 			cmd_struct.command_code = command_code(tokens[0], cmd_struct.command_length);
@@ -138,10 +195,17 @@ int main(int argc, char ** argv) {
 		}
 		
 		#ifdef DEBUG
-		fprintf(stderr, "\t> command[%s(%d)|%d]\n",
-				cmd_struct.command,
-				cmd_struct.command_length,
+		// Print CMD structure.
+		fprintf(stderr, "\nCMD Structure\n|-Command[%d]:%s\n|-Command Code:%d\n|-Params\n",
+				cmd_struct.command_length, cmd_struct.command,
 				cmd_struct.command_code);
+		int i = 0;
+		if(cmd_struct.command_params != NULL) { // Don't index a NULL array...
+			while(cmd_struct.command_params[i] != NULL) {
+				fprintf(stderr, "\t|-%s\n", cmd_struct.command_params[i]);
+				++i;
+			}
+		}
 		#endif
 	
 	
@@ -151,73 +215,67 @@ int main(int argc, char ** argv) {
 		// Do things with command parameters
 		switch(cmd_struct.command_code) {
 			case NEW_PROCESS:
-				#ifdef DEBUG
 				fprintf(stderr, MSG_LINE, "New process.");
-				#endif
-				// Create the process object
-				//HERE
+				// Initialize the process node
+				process = (ProcessNode *) malloc(sizeof(ProcessNode));
+				process->pid = -1;
+				process->command_struct = cmd_struct;
+				process->next = NULL;
+				process->prev = NULL;
 				
-				// Add it to the linked list
-				list_add(&l_list, pid);
+				// Perform System Calls (this assigns it a PID)
+				exec_new_process(process);
 				
-				// Perform System Calls
-				exec_new_process(output_buffer, process);
+				// Add it to the linked list (this assigns next/prev
+				if(process->pid != -1)
+					list_add(&l_list, process);
+				// Do shit
 				break;
 
-			case LIST_PROCESSES:
-				#ifdef DEBUG
+			case LIST_PROCESSES: // DONE
 				fprintf(stderr, MSG_LINE, "Listing processes.");
-				#endif
 				list_print(l_list);
 				break;
 
 			case KILL_PROCESS:
-				#ifdef DEBUG
 				fprintf(stderr, MSG_LINE, "Killing process.");
-				#endif
 				// Get the process object
 				process = list_remove(&l_list, pid);
 				if(process == NULL) // Error check
 					fprintf(stderr, ERROR_LINE, "Killing process, process not found");
 				
 				// Perform System Calls
-				exec_kill_process(output_buffer, process);
+				exec_kill_process(process);
 				break;
 
 			case STOP_PROCESS:
-				#ifdef DEBUG
 				fprintf(stderr, MSG_LINE, "Stopping process.");
-				#endif
 				process = list_find(l_list, pid);
 				if(process == NULL) // Error check
 					fprintf(stderr, ERROR_LINE, "Stopping process, process not found");
 				
 				// Perform System Calls
-				exec_stop_process(output_buffer, process);
+				exec_stop_process(process);
 				break;
 
 			case START_PROCESS:
-				#ifdef DEBUG
 				fprintf(stderr, MSG_LINE, "Starting process.");
-				#endif
 				process = list_find(l_list, pid);
 				if(process == NULL) // Error Check
 					fprintf(stderr, ERROR_LINE, "Starting process, process not found");
 				
 				// Perform System Calls
-				exec_start_process(output_buffer, process);
+				exec_start_process(process);
 				break;
 
 			case PROCESS_STATUS:
-				#ifdef DEBUG
 				fprintf(stderr, MSG_LINE, "Get process status.");
-				#endif
 				process = list_find(l_list, pid);
 				if(process == NULL) // Error check
 					fprintf(stderr, ERROR_LINE, "Getting process status, process not found");
 				
 				// Perform System Calls
-				exec_process_status(output_buffer, process);
+				exec_process_status(process);
 				break;
 	
 			case INVALID_COMMAND:	
@@ -226,6 +284,7 @@ int main(int argc, char ** argv) {
 		}
 		
 		// Print Response from output buffer.
+
 		if(tokens != NULL)
 			free(tokens);
 	}

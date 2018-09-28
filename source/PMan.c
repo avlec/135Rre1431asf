@@ -1,12 +1,14 @@
+// System Libraries
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+// System Call Libraries
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
-
+// User Libraries
 #include "header/Tokenizer.h"
 #include "header/CommandTypes.h"
 #include "header/ProcessLinkedList.h"
@@ -15,7 +17,7 @@
 #define TESTS_off
 
 #define PMAN_LINE  	"PMan > "
-#define ERROR_LINE 	"ERR: %s\n"
+#define ERROR_LINE	"ERR: %s\n"
 #define MSG_LINE	"MSG: %s\n"
 
 void exec_new_process(ProcessNode * process) {
@@ -32,7 +34,6 @@ void exec_new_process(ProcessNode * process) {
 		perror("execv");
 		_exit(0);
 	}
-	fprintf(stderr, "\nAfter Fork %d\n", child_pid);
 	process->pid = child_pid;
 }
 
@@ -71,6 +72,8 @@ void exec_start_process(ProcessNode * process) {
 		fprintf(stderr, "ERR: Starting process %d:%s failed.", process->pid, process->command_struct.command_params[1]);
 	// Write to buffer
 }
+
+// Temporary Structure for holding Process info.
 typedef struct ProcInfo {
 	char * comm;
 	char state;
@@ -80,6 +83,44 @@ typedef struct ProcInfo {
 	int voluntary_context_switches;
     int nonvoluntary_context_switches;
 } ProcInfo;
+
+const char StateNames [12][38] = {
+	"Running.", // R
+	"Sleeping in an interruptable wait.", // S
+	"Waiting in uninterruptible disk sleep", // D
+	"Zombie.", // Z
+	"Stopped", // T
+	"Tracing stop.", // t
+	"Paging.", // W
+	"Dead.", // X | x
+	"Wakekill.", // K
+	"Waking.", // W
+	"Parked.", // P
+	"DNE"
+};
+
+const int StateCharToNameMap [12][2] = {
+	{ 'R', 0 },
+	{ 'S', 1 },
+	{ 'D', 2 },
+	{ 'Z', 3 },
+	{ 'T', 4 },
+	{ 't', 5 },
+	{ 'W', 6 },
+	{ 'X', 7 },
+	{ 'x', 7 },
+	{ 'K', 8 },
+	{ 'W', 9 },
+	{ 'P', 10 },
+};
+
+const char * find_state(char StateChar) {
+	for(int i = 0; i < 11; ++i) {
+		if(StateCharToNameMap[i][0] == StateChar)
+			return StateNames[StateCharToNameMap[i][1]];
+	}
+	return StateNames[11];
+}
 
 void exec_process_status(ProcessNode * process) {
 	ProcInfo p_info;
@@ -112,8 +153,11 @@ void exec_process_status(ProcessNode * process) {
             fgets(buffer, sizeof buffer, proc_pid_status);
             matches += sscanf(buffer, "%*s %d", &p_info.nonvoluntary_context_switches);
         }
+	}
 
-    }
+	fprintf(stdout, "Comm: %s\nState: %c (%s)\nUTime: %ld\nSTime: %ld\nRSS: %ld\nVoluntary Context Switches: %d\nNonVoluntary Context Switches: %d\n",
+			p_info.comm, p_info.state, find_state(p_info.state), p_info.utime, p_info.stime, p_info.rss, p_info.voluntary_context_switches, p_info.nonvoluntary_context_switches);
+	// ((double)p_info.utime)/((double)sysconf(_SC_CLK_TCK)), ((double)p_info.stime)/((double)sysconf(_SC_CLK_TCK))
 }
 
 
@@ -137,6 +181,7 @@ int command_code(char * command, int length) {
 	}
 	return 0;
 }
+
 // ret 1 for match
 int check_command(const char * reference, int r_length, char * input, int length) {
 	if(length < r_length) return 0;
@@ -176,7 +221,7 @@ int main(int argc, char ** argv) {
 			if(buffer[i] == '\n')
 				buffer[i] = '\0';
 		#ifdef DEBUG
-		fprintf(stderr, "Command {%lu|%s} yields\n", strlen(buffer), buffer);	
+		fprintf(stderr, "Input {%lu|%s} yields\n", strlen(buffer), buffer);	
 		#endif
 		
 		//Tokenize input new
@@ -196,13 +241,13 @@ int main(int argc, char ** argv) {
 		
 		#ifdef DEBUG
 		// Print CMD structure.
-		fprintf(stderr, "\nCMD Structure\n|-Command[%d]:%s\n|-Command Code:%d\n|-Params\n",
+		fprintf(stderr, "├Command[%d]:%s\n├Command Code:%d\n└Params\n",
 				cmd_struct.command_length, cmd_struct.command,
 				cmd_struct.command_code);
 		int i = 0;
 		if(cmd_struct.command_params != NULL) { // Don't index a NULL array...
 			while(cmd_struct.command_params[i] != NULL) {
-				fprintf(stderr, "\t|-%s\n", cmd_struct.command_params[i]);
+				fprintf(stderr, "  %s%s\n", (cmd_struct.command_params[i+1] == NULL ? "└" : "├"), cmd_struct.command_params[i]);
 				++i;
 			}
 		}
@@ -215,7 +260,7 @@ int main(int argc, char ** argv) {
 		// Do things with command parameters
 		switch(cmd_struct.command_code) {
 			case NEW_PROCESS:
-				fprintf(stderr, MSG_LINE, "New process.");
+				fprintf(stdout, MSG_LINE, "New process.");
 				// Initialize the process node
 				process = (ProcessNode *) malloc(sizeof(ProcessNode));
 				process->pid = -1;
@@ -227,60 +272,88 @@ int main(int argc, char ** argv) {
 				exec_new_process(process);
 				
 				// Add it to the linked list (this assigns next/prev
-				if(process->pid != -1)
+				if(process->pid != -1) {
 					list_add(&l_list, process);
-				// Do shit
+					fprintf(stdout, "[%d]\n", process->pid);
+				} else
+					fprintf(stderr, ERROR_LINE, "Executing new process.");
 				break;
 
-			case LIST_PROCESSES: // DONE
-				fprintf(stderr, MSG_LINE, "Listing processes.");
+			case LIST_PROCESSES:
+				fprintf(stdout, MSG_LINE, "Listing processes.");
 				list_print(l_list);
 				break;
 
 			case KILL_PROCESS:
-				fprintf(stderr, MSG_LINE, "Killing process.");
-				// Get the process object
+				fprintf(stdout, MSG_LINE, "Killing process.");
+
+				if(sscanf(cmd_struct.command_params[0], "%d", &pid) == 0) {
+					fprintf(stderr, ERROR_LINE, "Expected pid of the process to kill.");
+					break;
+				}
+
 				process = list_remove(&l_list, pid);
-				if(process == NULL) // Error check
-					fprintf(stderr, ERROR_LINE, "Killing process, process not found");
-				
+				if(process == NULL) { // Error check
+					fprintf(stderr, ERROR_LINE, "Process not found.");
+					break;
+				}
 				// Perform System Calls
 				exec_kill_process(process);
 				break;
 
 			case STOP_PROCESS:
-				fprintf(stderr, MSG_LINE, "Stopping process.");
+				fprintf(stdout, MSG_LINE, "Stopping process.");
+
+				if(sscanf(cmd_struct.command_params[0], "%d", &pid) == 0) {
+					fprintf(stderr, ERROR_LINE, "Expected pid of process to stop.");
+					break;
+				}
+
 				process = list_find(l_list, pid);
 				if(process == NULL) // Error check
-					fprintf(stderr, ERROR_LINE, "Stopping process, process not found");
+					fprintf(stderr, ERROR_LINE, "Process not found");
 				
 				// Perform System Calls
 				exec_stop_process(process);
 				break;
 
 			case START_PROCESS:
-				fprintf(stderr, MSG_LINE, "Starting process.");
-				process = list_find(l_list, pid);
-				if(process == NULL) // Error Check
-					fprintf(stderr, ERROR_LINE, "Starting process, process not found");
+				fprintf(stdout, MSG_LINE, "Starting process.");
 				
+				if(sscanf(cmd_struct.command_params[0], "%d", &pid) == 0) {
+					fprintf(stderr, ERROR_LINE, "Expected pid of process to start.");
+					break;
+				}
+				
+				process = list_find(l_list, pid);
+				if(process == NULL) { // Error Check
+					fprintf(stderr, ERROR_LINE, "Process not found.");
+					break;
+				}
 				// Perform System Calls
 				exec_start_process(process);
 				break;
 
 			case PROCESS_STATUS:
-				fprintf(stderr, MSG_LINE, "Get process status.");
-				process = list_find(l_list, pid);
-				if(process == NULL) // Error check
-					fprintf(stderr, ERROR_LINE, "Getting process status, process not found");
+				fprintf(stdout, MSG_LINE, "Get process status.");
 				
+				if(sscanf(cmd_struct.command_params[0], "%d", &pid) == 0) {
+					fprintf(stderr, ERROR_LINE, "Expected pid of the process of which to display status.");
+					break;
+				}
+				
+				process = list_find(l_list, pid);
+				if(process == NULL) { // Error check
+					fprintf(stderr, ERROR_LINE, "Getting process status, process not found");
+					break;
+				}
 				// Perform System Calls
 				exec_process_status(process);
 				break;
 	
-			case INVALID_COMMAND:	
+			case INVALID_COMMAND:
 			default: // Input error handling
-				printf(ERROR_LINE, "Invalid input.");	
+				printf(ERROR_LINE, "Invalid input.");
 		}
 		
 		// Print Response from output buffer.

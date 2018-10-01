@@ -15,8 +15,9 @@ void list_init(LinkedList * l_list) {
 */
 int list_add(LinkedList * l_list, ProcessNode * new_node) {
 	// Check if duplicate
-	if(list_find(*(l_list), new_node->pid) != NULL)
+	if(list_find(*(l_list), new_node->pid) != NULL) {
 		return -1;
+	}
 
 	ProcessNode * t_node = l_list->tail;
 	if(t_node == NULL) {
@@ -99,9 +100,27 @@ ProcessNode * list_remove(LinkedList * l_list, int pid) {
 void list_print(LinkedList l_list) {
 	ProcessNode * p_node = l_list.head;
 
-	fprintf(stderr, "\nPrinting List of size %d\n", l_list.size);
 	for(int i = 0; i < l_list.size; ++i) {
-		fprintf(stderr, "@[%d] { pid:%d }\n", i, p_node->pid);
+		fprintf(stderr, "%d: %s\n", p_node->pid, p_node->command_struct.command_params[0]);
 		p_node = p_node->next;
-	}	
+	}
+	fprintf(stderr, "Total background jobs: %d\n", l_list.size);
+}
+
+void list_free(LinkedList l_list) {
+	ProcessNode * curr = l_list.head;
+	if(l_list.size < 1)
+		return;
+	ProcessNode * next = curr->next;
+
+	int i = 0;
+	while(i < l_list.size) {
+		//free(&(curr->command_struct.command));
+		free(curr);
+		if(next == NULL)
+			break;
+		curr = next;
+		next = curr->next;
+		++i;
+	}
 }

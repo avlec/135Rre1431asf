@@ -72,7 +72,7 @@ char ** stot_f(char ** tokens, int string_length, char * delimiters) {
 	// add pointer to list of strings.
 	bool last_was_delim = false;
 	int token_index = 0;
-	for(int i = 0; (i < string_length) || (tokens[0][i] == '\0'); ++i) {
+	for(int i = 0; (i < string_length) && (tokens[0][i] != '\0'); ++i) {
 		if(stot_d_c(tokens[0][i], delimiters)) { // replacing delim character
 			if(!last_was_delim) { // Avoids unnecessary memory operations
 				tokens[0][i] = '\0';

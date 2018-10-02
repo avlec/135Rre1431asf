@@ -1,7 +1,7 @@
 COMPILER=gcc
 COMPILER_FLAGS=-Wall -Werror -g
 
-PMan: ../source/PMan.c CommandCheck SystemCallWrapper ProcessLinkedList Tokenizer Inf
+PMan: ../source/PMan.c CommandCheck SystemCallWrapper ProcessLinkedList Tokenizer
 	$(COMPILER) $(COMPILER_FLAGS) ../source/PMan.c CommandCheck.o SystemCallWrapper.o ProcessLinkedList.o Tokenizer.o -o PMan
 
 CommandCheck: ../source/CommandCheck.c ../source/header/CommandCheck.h
@@ -16,8 +16,5 @@ ProcessLinkedList: ../source/ProcessLinkedList.c ../source/header/ProcessLinkedL
 Tokenizer: ../source/Tokenizer.c ../source/header/Tokenizer.h
 	$(COMPILER) $(COMPILER_FLAGS) -c ../source/Tokenizer.c -o Tokenizer.o
 
-Inf: ../source/inf.c
-	$(COMPILER) $(COMPILER_FLAGS) ../source/inf.c -o Inf
-
 clean:
-	rm *.o
+	rm *.o PMan

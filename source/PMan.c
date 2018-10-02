@@ -21,7 +21,17 @@ int buffer_size = 256;
 char * buffer = NULL;
 LinkedList l_list;
 
-
+void update_list(LinkedList * l_list) {
+	ProcessNode * p_node = l_list->head;
+	while(p_node != NULL) {
+		int pid = p_node->pid;
+		if(exec_check_process(pid) == false) {
+			list_remove(l_list, pid);
+			fprintf(stdout, "Notice: Process %d has exited prior to this action.\n", pid);
+		}
+		p_node = p_node->next;
+	}
+}
 
 void signal_callback_handler(int signum) {
 	list_free(l_list);
@@ -47,7 +57,7 @@ int main(int argc, char ** argv) {
 			exit(1);
 		}
 		memset(buffer, '\0', buffer_size);
-		
+
 		// Read User Input
 		if(fgets(buffer, buffer_size, stdin) == NULL)
 			break;
@@ -57,6 +67,9 @@ int main(int argc, char ** argv) {
 		#ifdef DEBUG
 		fprintf(stderr, "Input {%lu|%s} yields\n", strlen(buffer), buffer);	
 		#endif
+
+		// Update Process List.
+		update_list(&l_list);
 		
 		//Tokenize input new
 		CommandStruct cmd_struct;		
@@ -108,7 +121,7 @@ int main(int argc, char ** argv) {
 				// Add it to the linked list (this assigns next/prev
 				if(process->pid != -1) {
 					list_add(&l_list, process);
-					fprintf(stdout, "[%d]\n", process->pid);
+						fprintf(stdout, "[%d]\n", process->pid);
 				} else {
 					fprintf(stderr, ERROR_LINE, "Executing new process.");
 					free(process);
@@ -138,11 +151,8 @@ int main(int argc, char ** argv) {
 					break;
 				}
 				// Perform System Calls
-				if(exec_kill_process(process) == false) {
-					list_remove(&l_list, process->pid);
-					fprintf(stdout, "Notice: Process has exited prior to this action.\n");
-				}
-				
+				exec_kill_process(process);
+
 				break;
 
 			case STOP_PROCESS:
@@ -162,10 +172,7 @@ int main(int argc, char ** argv) {
 					fprintf(stderr, ERROR_LINE, "Process not found");
 				
 				// Perform System Calls
-				if(exec_stop_process(process) == false) {
-					list_remove(&l_list, process->pid);
-					fprintf(stdout, "Notice: Process has exited prior to this action.\n");
-				}
+				exec_stop_process(process);
 				break;
 
 			case START_PROCESS:
@@ -186,10 +193,7 @@ int main(int argc, char ** argv) {
 					break;
 				}
 				// Perform System Calls
-				if(exec_start_process(process) == false) {
-					list_remove(&l_list, process->pid);
-					fprintf(stdout, "Notice: Process has exited prior to this action.\n");
-				}
+				exec_start_process(process);
 				break;
 
 			case PROCESS_STATUS:
@@ -211,17 +215,12 @@ int main(int argc, char ** argv) {
 				}
 
 				// Perform System Calls
-				if(exec_process_status(process) == false) {
-					list_remove(&l_list, process->pid);
-					fprintf(stdout, "Notice: Process has exited prior to this action.\n");
-				}
+				exec_process_status(process);
 				break;
 	
 			case INVALID_COMMAND:
 			default: // Input error handling
 				printf(ERROR_LINE, "Invalid input.");
 		}
-		
-		// Print Response from output buffer.
 	}
 }

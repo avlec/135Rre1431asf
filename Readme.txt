@@ -1,2 +1,2 @@
-compile the program by running 'make' in the build folder
-run the program by executing './PMan' in the build folder
+To compile the program run 'make' in the build folder.
+To run the program execute './PMan' in the build folder.

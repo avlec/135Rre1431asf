@@ -20,6 +20,7 @@ void exec_new_process(ProcessNode * process) {
 		#endif
 		execv(process->command_struct.command_params[0],
 				process->command_struct.command_params);
+		fprintf(stderr, "\n");
 		perror("execv");
 		_exit(0);
 	}
@@ -32,46 +33,29 @@ void free_process(ProcessNode * process) {
 	free(process);
 }
 
-bool exec_kill_process(ProcessNode * process) {
-	if(exec_check_process(process->pid))// Checks if process exists
-		return false;
-	
-	// Do shit
+void exec_kill_process(ProcessNode * process) {
 	pid_t ret = kill(process->pid, SIGTERM);
 	if(ret != 0) {
 		fprintf(stderr, "ERR: Killing process %d:%s failed.\n", process->pid, process->command_struct.command_params[1]);
-		return false;
+		return;
 	}
 	free_process(process);
-	return true;
 }
 
-bool exec_stop_process(ProcessNode * process) {
-	if(exec_check_process(process->pid))// Checks if process exists
-		return false;
-	
-	// Do shit
+void exec_stop_process(ProcessNode * process) {	
 	pid_t pid = kill(process->pid, SIGSTOP);
 	if(pid != 0) {
-		fprintf(stderr, "ERR: Killing process %d:%s failed", process->pid, process->command_struct.command_params[1]);
-		return false;
+		fprintf(stderr, "ERR: Stopping process %d:%s failed", process->pid, process->command_struct.command_params[1]);
+		return;
 	}
-	// Write to buffer
-	return true;
 }
 
-bool exec_start_process(ProcessNode * process) {
-	if(exec_check_process(process->pid))// Checks if process exists
-		return false;
-	
-	// Do shit
+void exec_start_process(ProcessNode * process) {
 	pid_t pid = kill(process->pid, SIGCONT);
 	if(pid == 0)
-		return false;
+		return;
 	else
 		fprintf(stderr, "ERR: Starting process %d:%s failed.", process->pid, process->command_struct.command_params[1]);
-	// Write to buffer
-	return true;
 }
 
 // Temporary Structure for holding Process info.
@@ -123,17 +107,14 @@ const char * find_state(char StateChar) {
 	return StateNames[11];
 }
 
-bool exec_process_status(ProcessNode * process) {
-	if(exec_check_process(process->pid))// Checks if process exists
-		return false;
-	
+void exec_process_status(ProcessNode * process) {
 	ProcInfo p_info = { .state=' ', .utime=0, .stime=0, .rss=-1, .voluntary_context_switches=-1, .nonvoluntary_context_switches=-1};
     char str[64];
 	sprintf(str, "/proc/%d/stat", process->pid);
 	FILE * proc_pid_stat = fopen(str, "r");
 	if(proc_pid_stat == NULL) {
 	    fprintf(stderr, "ERR: %s\n", "Opening /proc/.../stat.");
-	    return false;
+	    return;
 	}
     
     int matches = 0;
@@ -144,7 +125,7 @@ bool exec_process_status(ProcessNode * process) {
 	FILE * proc_pid_status = fopen(str, "r");
     if(proc_pid_status == NULL) {
 	    fprintf(stderr, "ERR: %s\n", "Opening /proc/.../status.");
-	    return false;
+	    return;
 	}
 	
     char buffer[64];
@@ -157,21 +138,27 @@ bool exec_process_status(ProcessNode * process) {
             matches += sscanf(buffer, "%*s %d", &p_info.nonvoluntary_context_switches);
         }
 	}
-    fprintf(stderr, "MATCHES:%d\n", matches);
-	fprintf(stdout, "Comm: %s\nState: %c (%s)\nUTime: %ld\nSTime: %ld\nRSS: %ld\nVoluntary Context Switches: %d\nNonVoluntary Context Switches: %d\n",
-			p_info.comm, p_info.state, find_state(p_info.state), p_info.utime, p_info.stime, p_info.rss, p_info.voluntary_context_switches, p_info.nonvoluntary_context_switches);
+
+	if(matches != 7) { // Make sure that it read the files properly
+		fprintf(stderr, "ERR: Reading /proc/%d/stat and or /proc/%d/status.", process->pid, process->pid);
+		return;
+	}
+
+	fprintf(stdout, "Comm: %s\nState: %c (%s)\nUTime: %lf\nSTime: %lf\nRSS: %ld\nVoluntary Context Switches: %d\nNonVoluntary Context Switches: %d\n",
+			p_info.comm, p_info.state, find_state(p_info.state),
+			((double)p_info.utime)/((double)sysconf(_SC_CLK_TCK)),
+			((double)p_info.stime)/((double)sysconf(_SC_CLK_TCK)),
+			p_info.rss, p_info.voluntary_context_switches, p_info.nonvoluntary_context_switches);
 	// TODO CONVERSION
     // ((double)p_info.utime)/((double)sysconf(_SC_CLK_TCK)), ((double)p_info.stime)/((double)sysconf(_SC_CLK_TCK))
 
 	// Close files
 	fclose(proc_pid_stat);
 	fclose(proc_pid_status);
-
-	return true;
 }
 
 // Returns true for exists, false for doesn't
 bool exec_check_process(int pid) {
 	int temporary_status = 0;
-	return waitpid(pid, &temporary_status, WNOHANG);
+	return (waitpid(pid, &temporary_status, WNOHANG) != -1);
 }

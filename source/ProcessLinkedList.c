@@ -52,7 +52,6 @@ ProcessNode * list_find(LinkedList l_list, int pid) {
 	otherwise, node is removed, linkedlist is updated, and returns PID
 */
 ProcessNode * list_remove(LinkedList * l_list, int pid) {
-	printf("removing me");
 	ProcessNode * node = l_list->head;
 	
 	// Case where there is one node

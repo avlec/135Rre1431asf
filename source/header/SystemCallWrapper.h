@@ -6,10 +6,10 @@
 #include "ProcessLinkedList.h"
 
 void exec_new_process(ProcessNode * process);
-bool exec_kill_process(ProcessNode * process);
-bool exec_stop_process(ProcessNode * process);
-bool exec_start_process(ProcessNode * process);
-bool exec_process_status(ProcessNode * process);
+void exec_kill_process(ProcessNode * process);
+void exec_stop_process(ProcessNode * process);
+void exec_start_process(ProcessNode * process);
+void exec_process_status(ProcessNode * process);
 bool exec_check_process(int pid);
 
 #endif

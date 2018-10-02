@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "header/ProcessLinkedList.h"
+#include "header/SystemCallWrapper.h"
 
 void list_init(LinkedList * l_list) {
 	l_list->head = NULL;
@@ -51,6 +52,7 @@ ProcessNode * list_find(LinkedList l_list, int pid) {
 	otherwise, node is removed, linkedlist is updated, and returns PID
 */
 ProcessNode * list_remove(LinkedList * l_list, int pid) {
+	printf("removing me");
 	ProcessNode * node = l_list->head;
 	
 	// Case where there is one node
@@ -97,14 +99,14 @@ ProcessNode * list_remove(LinkedList * l_list, int pid) {
 
 /* Prints the contents of the given linkedlist to stderr
 */
-void list_print(LinkedList l_list) {
-	ProcessNode * p_node = l_list.head;
+void list_print(LinkedList * l_list) {
+	ProcessNode * p_node = l_list->head;
 
-	for(int i = 0; i < l_list.size; ++i) {
+	for(int i = 0; i < l_list->size; ++i) {
 		fprintf(stderr, "%d: %s\n", p_node->pid, p_node->command_struct.command_params[0]);
 		p_node = p_node->next;
 	}
-	fprintf(stderr, "Total background jobs: %d\n", l_list.size);
+	fprintf(stderr, "Total background jobs: %d\n", l_list->size);
 }
 
 void list_free(LinkedList l_list) {

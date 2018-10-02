@@ -21,6 +21,8 @@ int buffer_size = 256;
 char * buffer = NULL;
 LinkedList l_list;
 
+
+
 void signal_callback_handler(int signum) {
 	list_free(l_list);
 	fprintf(stdout, "\n");
@@ -102,7 +104,6 @@ int main(int argc, char ** argv) {
 				
 				// Perform System Calls (this assigns it a PID)
 				exec_new_process(process);
-				fprintf(stderr, "LOG: pid:%d", process->pid);
 				
 				// Add it to the linked list (this assigns next/prev
 				if(process->pid != -1) {
@@ -116,7 +117,7 @@ int main(int argc, char ** argv) {
 
 			case LIST_PROCESSES:
 				fprintf(stdout, MSG_LINE, "Listing processes.");
-				list_print(l_list);
+				list_print(&l_list);
 				break;
 
 			case KILL_PROCESS:
@@ -137,7 +138,11 @@ int main(int argc, char ** argv) {
 					break;
 				}
 				// Perform System Calls
-				exec_kill_process(process);
+				if(exec_kill_process(process) == false) {
+					list_remove(&l_list, process->pid);
+					fprintf(stdout, "Notice: Process has exited prior to this action.\n");
+				}
+				
 				break;
 
 			case STOP_PROCESS:
@@ -157,7 +162,10 @@ int main(int argc, char ** argv) {
 					fprintf(stderr, ERROR_LINE, "Process not found");
 				
 				// Perform System Calls
-				exec_stop_process(process);
+				if(exec_stop_process(process) == false) {
+					list_remove(&l_list, process->pid);
+					fprintf(stdout, "Notice: Process has exited prior to this action.\n");
+				}
 				break;
 
 			case START_PROCESS:
@@ -178,7 +186,10 @@ int main(int argc, char ** argv) {
 					break;
 				}
 				// Perform System Calls
-				exec_start_process(process);
+				if(exec_start_process(process) == false) {
+					list_remove(&l_list, process->pid);
+					fprintf(stdout, "Notice: Process has exited prior to this action.\n");
+				}
 				break;
 
 			case PROCESS_STATUS:
@@ -198,8 +209,12 @@ int main(int argc, char ** argv) {
 					fprintf(stderr, ERROR_LINE, "Getting process status, process not found");
 					break;
 				}
+
 				// Perform System Calls
-				exec_process_status(process);
+				if(exec_process_status(process) == false) {
+					list_remove(&l_list, process->pid);
+					fprintf(stdout, "Notice: Process has exited prior to this action.\n");
+				}
 				break;
 	
 			case INVALID_COMMAND:

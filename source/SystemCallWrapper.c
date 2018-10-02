@@ -32,34 +32,46 @@ void free_process(ProcessNode * process) {
 	free(process);
 }
 
-void exec_kill_process(ProcessNode * process) {
+bool exec_kill_process(ProcessNode * process) {
+	if(exec_check_process(process->pid))// Checks if process exists
+		return false;
+	
 	// Do shit
 	pid_t ret = kill(process->pid, SIGTERM);
-	if(ret == 0)
-		free_process(process);
-	else
+	if(ret != 0) {
 		fprintf(stderr, "ERR: Killing process %d:%s failed.\n", process->pid, process->command_struct.command_params[1]);
-	// Write to buffer
+		return false;
+	}
+	free_process(process);
+	return true;
 }
 
-void exec_stop_process(ProcessNode * process) {
+bool exec_stop_process(ProcessNode * process) {
+	if(exec_check_process(process->pid))// Checks if process exists
+		return false;
+	
 	// Do shit
 	pid_t pid = kill(process->pid, SIGSTOP);
-	if(pid == 0)
-		return;
-	else
+	if(pid != 0) {
 		fprintf(stderr, "ERR: Killing process %d:%s failed", process->pid, process->command_struct.command_params[1]);
+		return false;
+	}
 	// Write to buffer
+	return true;
 }
 
-void exec_start_process(ProcessNode * process) {
+bool exec_start_process(ProcessNode * process) {
+	if(exec_check_process(process->pid))// Checks if process exists
+		return false;
+	
 	// Do shit
 	pid_t pid = kill(process->pid, SIGCONT);
 	if(pid == 0)
-		return;
+		return false;
 	else
 		fprintf(stderr, "ERR: Starting process %d:%s failed.", process->pid, process->command_struct.command_params[1]);
 	// Write to buffer
+	return true;
 }
 
 // Temporary Structure for holding Process info.
@@ -111,14 +123,17 @@ const char * find_state(char StateChar) {
 	return StateNames[11];
 }
 
-void exec_process_status(ProcessNode * process) {
+bool exec_process_status(ProcessNode * process) {
+	if(exec_check_process(process->pid))// Checks if process exists
+		return false;
+	
 	ProcInfo p_info = { .state=' ', .utime=0, .stime=0, .rss=-1, .voluntary_context_switches=-1, .nonvoluntary_context_switches=-1};
     char str[64];
 	sprintf(str, "/proc/%d/stat", process->pid);
 	FILE * proc_pid_stat = fopen(str, "r");
 	if(proc_pid_stat == NULL) {
 	    fprintf(stderr, "ERR: %s\n", "Opening /proc/.../stat.");
-	    return;
+	    return false;
 	}
     
     int matches = 0;
@@ -129,7 +144,7 @@ void exec_process_status(ProcessNode * process) {
 	FILE * proc_pid_status = fopen(str, "r");
     if(proc_pid_status == NULL) {
 	    fprintf(stderr, "ERR: %s\n", "Opening /proc/.../status.");
-	    return;
+	    return false;
 	}
 	
     char buffer[64];
@@ -149,6 +164,14 @@ void exec_process_status(ProcessNode * process) {
     // ((double)p_info.utime)/((double)sysconf(_SC_CLK_TCK)), ((double)p_info.stime)/((double)sysconf(_SC_CLK_TCK))
 
 	// Close files
-	//fclose(proc_pid_stat);
+	fclose(proc_pid_stat);
 	fclose(proc_pid_status);
+
+	return true;
+}
+
+// Returns true for exists, false for doesn't
+bool exec_check_process(int pid) {
+	int temporary_status = 0;
+	return waitpid(pid, &temporary_status, WNOHANG);
 }

@@ -22,6 +22,6 @@ void list_init(LinkedList * l_list);
 int list_add(LinkedList * l_list, ProcessNode * new_node);
 ProcessNode * list_find(LinkedList l_list, int pid);
 ProcessNode * list_remove(LinkedList * l_list, int pid);
-void list_print(LinkedList l_list);
+void list_print(LinkedList * l_list);
 void list_free(LinkedList l_list);
 #endif
